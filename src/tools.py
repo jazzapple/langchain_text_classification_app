@@ -4,9 +4,22 @@ from langchain_core.tools import tool
 from langchain_ollama import ChatOllama
 
 from .config import MODEL
+from .prompts import entropy_prompt
 from .schema import CategoryProbabilities, ClassificationResult
 
 CATEGORIES = ["World", "Sports", "Business", "Sci/Tech"]
+
+
+def _compute_entropy(probs: CategoryProbabilities) -> float:
+    """Compute Shannon entropy in bits from a CategoryProbabilities distribution."""
+    p = [probs.world, probs.sports, probs.business, probs.sci_tech]
+    return -sum(pi * math.log2(pi) for pi in p if pi > 0)
+
+
+def _build_entropy_chain():
+    llm = ChatOllama(model=MODEL)
+    structured_llm = llm.with_structured_output(CategoryProbabilities)
+    return entropy_prompt | structured_llm
 
 
 @tool
@@ -21,13 +34,8 @@ def check_entropy(text: str) -> float:
     evaluation using the same persona as the classifier, maximising alignment but
     not guaranteeing identical reasoning.
     """
-    from .prompts import entropy_prompt
-    llm = ChatOllama(model=MODEL)
-    structured_llm = llm.with_structured_output(CategoryProbabilities)
-    chain = entropy_prompt | structured_llm
-    probs = chain.invoke({"text": text})
-    p = [probs.world, probs.sports, probs.business, probs.sci_tech]
-    return -sum(pi * math.log2(pi) for pi in p if pi > 0)
+    probs = _build_entropy_chain().invoke({"text": text})
+    return _compute_entropy(probs)
 
 
 @tool

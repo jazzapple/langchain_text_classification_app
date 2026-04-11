@@ -3,9 +3,8 @@ import argparse
 from src.classifier import build_chain
 from src.data import LABEL_MAP, load_sample
 from src.evaluate import run_evaluation
-from src.config import MODEL
+from src.config import ENTROPY_THRESHOLD, EVAL_SAMPLE_SIZE, MODEL
 from src.tools import check_entropy, human_review
-ENTROPY_THRESHOLD = 1.4  # bits; max is 2.0 (uniform). Tune as needed.
 
 
 def classify(text: str) -> None:
@@ -31,7 +30,7 @@ def classify(text: str) -> None:
 
 def evaluate() -> None:
     chain = build_chain(model=MODEL)
-    dataset = load_sample(split="test", n=100)
+    dataset = load_sample(split="test", n=EVAL_SAMPLE_SIZE)
     run_evaluation(chain, dataset, LABEL_MAP)
 
 
