@@ -4,7 +4,7 @@ from .prompts import classification_prompt
 from .schema import ClassificationResult
 
 
-def build_chain(model: str = "qwen2.5:3b"):
+def build_chain(model: str = "qwen2.5:3b"):  # default overridden by src/config.py in practice
     llm = ChatOllama(model=model)
     structured_llm = llm.with_structured_output(ClassificationResult)
     return classification_prompt | structured_llm

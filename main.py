@@ -3,15 +3,30 @@ import argparse
 from src.classifier import build_chain
 from src.data import LABEL_MAP, load_sample
 from src.evaluate import run_evaluation
-
-MODEL = "qwen2.5:3b"
+from src.config import MODEL
+from src.tools import check_entropy, human_review
+ENTROPY_THRESHOLD = 1.4  # bits; max is 2.0 (uniform). Tune as needed.
 
 
 def classify(text: str) -> None:
     chain = build_chain(model=MODEL)
     result = chain.invoke({"text": text})
+
+    # Second tool call: ask the LLM to score confidence across all 4 categories
+    # and compute Shannon entropy. Higher entropy = more uncertain.
+    # Called via .invoke() — the standard interface for all LangChain tools and runnables.
+    entropy = check_entropy.invoke({"text": text})
+
+    if entropy > ENTROPY_THRESHOLD:
+        result = human_review.invoke({
+            "article_text": text,
+            "llm_category": result.category,
+            "llm_reasoning": result.reasoning,
+        })
+
     print(f"Category:  {result.category}")
     print(f"Reasoning: {result.reasoning}")
+    print(f"Entropy:   {entropy:.3f} bits")
 
 
 def evaluate() -> None:

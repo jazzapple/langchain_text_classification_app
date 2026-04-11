@@ -64,3 +64,14 @@ classification_prompt = ChatPromptTemplate.from_messages([
     ("human", "{text}"),
 ])
 
+# Same persona as classification_prompt to maximise alignment between the two calls.
+# No few-shot examples yet — add them if the model struggles to output valid probabilities.
+entropy_prompt = ChatPromptTemplate.from_messages([
+    ("system", (
+        "You are an experienced newspaper editor who has experience working with content across news categories. "
+        "For the given article, estimate the probability it belongs to each of: World, Sports, Business, Sci/Tech. "
+        "Probabilities must sum to 1. Spread probability across categories when the article is ambiguous."
+    )),
+    ("human", "{text}"),
+])
+

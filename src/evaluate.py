@@ -18,12 +18,15 @@ def run_evaluation(chain, dataset, label_map: dict):
         predictions.append(result.category)
         true_labels.append(label_map[item["label"]])
 
-        console.print(
-            f"[dim]{i + 1:3}.[/dim] "
-            f"True: [cyan]{label_map[item['label']]:10}[/cyan] "
-            f"Pred: [{'green' if result.category == label_map[item['label']] else 'red'}]{result.category:10}[/]  "
-            f"[dim]{result.reasoning[:80]}[/dim]"
-        )
+        # Print incorrect predictions
+        if result.category != label_map[item["label"]]:
+            console.print(
+                f"[dim]{i + 1:3}.[/dim] "
+                f"True: [cyan]{label_map[item['label']]:10}[/cyan] "
+                f"Pred: [red]{result.category}[/red]\n"
+                f"      [dim]{item['text']}[/dim]\n"
+                f"      {result.reasoning}\n"
+            )
 
     acc = accuracy_score(true_labels, predictions)
     cm = confusion_matrix(true_labels, predictions, labels=CATEGORIES)
