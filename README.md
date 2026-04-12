@@ -11,7 +11,7 @@ News article classification using LangChain, Pydantic, and a local LLM via Ollam
 
 ```bash
 # Pull the model (see src/config.py to change)
-ollama pull phi3:mini
+ollama pull gemma3:4b
 
 # Install dependencies
 uv sync
@@ -21,7 +21,7 @@ uv sync
 
 ### Evaluate
 
-Classifies 100 articles from the [AG News](https://huggingface.co/datasets/fancyzhx/ag_news) test set. Prints incorrect predictions (with article text and reasoning), a confusion matrix, per-class metrics, and overall accuracy.
+Classifies 100 articles from the [AG News](https://huggingface.co/datasets/fancyzhx/ag_news) test set. Prints incorrect predictions (with article text and reasoning), a confusion matrix, per-class metrics, overall accuracy, and accuracy broken down by confidence level.
 
 ```bash
 uv run python main.py evaluate
@@ -29,16 +29,16 @@ uv run python main.py evaluate
 
 ### Infer
 
-Classifies a single article. A second LLM call estimates a probability distribution across all 4 categories and computes Shannon entropy. If entropy exceeds the threshold (`ENTROPY_THRESHOLD` in `main.py`), the article is surfaced for human review in the terminal.
+Classifies a single article. The model self-reports its confidence (`high` or `low`) as part of the classification output. If confidence is `low`, the article is surfaced for human review in the terminal.
 
 ```bash
 uv run python main.py infer "Apple reports record quarterly earnings driven by iPhone sales."
 ```
 
-**Human review prompt** (triggered when entropy > threshold):
+**Human review prompt** (triggered when confidence is low):
 
 ```
---- High uncertainty detected, human review required ---
+--- Low confidence classification detected, human review required ---
 
 Article: "..."
 LLM predicted: Business
@@ -63,14 +63,13 @@ uv run pytest tests/ -v
 | Setting | File | Description |
 |---|---|---|
 | Model | `src/config.py` | Ollama model name |
-| Entropy threshold | `src/config.py` | Bits above which human review is triggered (0.0–2.0) |
+| Confidence threshold | `src/config.py` | Confidence level that triggers human review (`"low"`) |
 | Sample size | `src/config.py` | Number of articles used in evaluation |
 
 ## Key Concepts
 
 - **`ChatPromptTemplate`** — separates prompt definition from chain execution
-- **`with_structured_output(Schema)`** — forces the LLM to return JSON matching a Pydantic schema
+- **`with_structured_output(Schema)`** — forces the LLM to return JSON matching a Pydantic schema; not deterministically enforced — relies on tool calling or JSON mode depending on model support
 - **LangChain pipe operator (`|`)** — composes `prompt | llm` into an invokable chain
 - **`@tool`** — wraps a Python function as a LangChain `StructuredTool`, auto-generating a schema from type annotations and docstring; called via `.invoke()` like any other LangChain Runnable
-- **Sequential tool pipeline** — explicit orchestration of multiple tool calls, as a deliberate contrast to a ReAct agent where the LLM decides when to call tools
-- **Shannon entropy** — measures uncertainty across the category probability distribution (0.0 = certain, 2.0 = uniform); computed from a second, independent LLM call
+- **Self-reported confidence** — the model outputs `confidence: Literal["high", "low"]` as part of the structured schema; this is a qualitative signal generated as text, not a calibrated probability. See `src/tools.py` for alternative approaches explored (Shannon entropy via second LLM call, Ollama native logprobs) and why they were discarded.
