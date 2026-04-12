@@ -10,6 +10,7 @@ console = Console()
 def run_evaluation(chain, dataset, label_map: dict):
     predictions = []
     true_labels = []
+    confidences = []
 
     console.print(f"\n[bold]Classifying {len(dataset)} articles...[/bold]\n")
 
@@ -17,6 +18,7 @@ def run_evaluation(chain, dataset, label_map: dict):
         result = chain.invoke({"text": item["text"]})
         predictions.append(result.category)
         true_labels.append(label_map[item["label"]])
+        confidences.append(result.confidence)
 
         # Print incorrect predictions
         if result.category != label_map[item["label"]]:
@@ -33,6 +35,7 @@ def run_evaluation(chain, dataset, label_map: dict):
 
     _print_confusion_matrix(cm)
     _print_per_class_metrics(true_labels, predictions)
+    _print_per_confidence_metrics(true_labels, predictions, confidences)
     console.print(f"\n[bold green]Accuracy: {acc:.1%}[/bold green] ({sum(p == t for p, t in zip(predictions, true_labels))}/{len(dataset)} correct)\n")
 
 
@@ -55,6 +58,25 @@ def _print_per_class_metrics(true_labels, predictions):
             f"{m['f1-score']:.2f}",
             str(int(m["support"])),
         )
+
+    console.print(table)
+
+
+def _print_per_confidence_metrics(true_labels, predictions, confidences):
+    table = Table(title="\nAccuracy by Confidence")
+    table.add_column("Confidence", style="bold")
+    table.add_column("Correct", justify="center")
+    table.add_column("Total", justify="center")
+    table.add_column("Accuracy", justify="center")
+
+    for level in ["high", "low"]:
+        indices = [i for i, c in enumerate(confidences) if c == level]
+        if not indices:
+            table.add_row(level, "—", "0", "—")
+            continue
+        correct = sum(predictions[i] == true_labels[i] for i in indices)
+        total = len(indices)
+        table.add_row(level, str(correct), str(total), f"{correct / total:.1%}")
 
     console.print(table)
 

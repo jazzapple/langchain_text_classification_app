@@ -3,29 +3,26 @@ import argparse
 from src.classifier import build_chain
 from src.data import LABEL_MAP, load_sample
 from src.evaluate import run_evaluation
-from src.config import ENTROPY_THRESHOLD, EVAL_SAMPLE_SIZE, MODEL
-from src.tools import check_entropy, human_review
+from src.config import CONFIDENCE_THRESHOLD, EVAL_SAMPLE_SIZE, MODEL
+from src.tools import human_review
 
 
 def classify(text: str) -> None:
     chain = build_chain(model=MODEL)
     result = chain.invoke({"text": text})
 
-    # Second tool call: ask the LLM to score confidence across all 4 categories
-    # and compute Shannon entropy. Higher entropy = more uncertain.
+    # If the model reports low confidence, invoke the human_review tool.
     # Called via .invoke() — the standard interface for all LangChain tools and runnables.
-    entropy = check_entropy.invoke({"text": text})
-
-    if entropy > ENTROPY_THRESHOLD:
+    if result.confidence == CONFIDENCE_THRESHOLD:
         result = human_review.invoke({
             "article_text": text,
             "llm_category": result.category,
             "llm_reasoning": result.reasoning,
         })
 
-    print(f"Category:  {result.category}")
-    print(f"Reasoning: {result.reasoning}")
-    print(f"Entropy:   {entropy:.3f} bits")
+    print(f"Category:   {result.category}")
+    print(f"Reasoning:  {result.reasoning}")
+    print(f"Confidence: {result.confidence}")
 
 
 def evaluate() -> None:

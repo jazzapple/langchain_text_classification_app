@@ -10,10 +10,9 @@ class ClassificationResult(BaseModel):
     reasoning: str = Field(
         description="A brief one-sentence explanation of why this category was chosen"
     )
-
-
-class CategoryProbabilities(BaseModel):
-    world: float = Field(description="Probability this article belongs to World (0.0–1.0)")
-    sports: float = Field(description="Probability this article belongs to Sports (0.0–1.0)")
-    business: float = Field(description="Probability this article belongs to Business (0.0–1.0)")
-    sci_tech: float = Field(description="Probability this article belongs to Sci/Tech (0.0–1.0)")
+    confidence: Literal["high", "low"] = Field(
+        description=(
+            "Your confidence in this classification. Use 'low' when the article is ambiguous "
+            "or could belong to multiple categories. Use 'high' when it clearly fits one category."
+        )
+    )
